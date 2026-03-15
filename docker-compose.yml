@@ -50,6 +50,19 @@ services:
         volumes:
             - openmrs-data:/openmrs/data/
 
+    prometheus:
+        image: prom/prometheus
+        container_name: openmrs-prometheus
+        ports:
+        - "9090:9090"
+        volumes:
+        - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    grafana:
+        image: grafana/grafana
+        container_name: openmrs-grafana
+        ports:
+        - "3000:3000"
+
 volumes:
     db-data:
     openmrs-data:
