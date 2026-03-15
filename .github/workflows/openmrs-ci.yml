@@ -1,0 +1,42 @@
+name: OpenMRS DevOps Quality Pipeline
+
+on:
+  push:
+  pull_request:
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Setup Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Build OpenMRS
+      run: mvn clean install -DskipTests
+
+    - name: Run Unit Tests
+      run: mvn test
+
+    - name: Static Code Analysis
+      run: mvn checkstyle:check
+
+    - name: SpotBugs Analysis
+      run: mvn spotbugs:check
+
+    - name: Package Application
+      run: mvn package
+
+
+
+
+    
