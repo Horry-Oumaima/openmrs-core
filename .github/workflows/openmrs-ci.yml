@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
+      - devops-quality-process
       - feature/devops-quality-pipeline
       - tp2/**
   pull_request:
