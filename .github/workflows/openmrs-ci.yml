@@ -5,8 +5,6 @@ on:
   push:
     branches:
       - devops-quality-process
-      - feature/devops-quality-pipeline
-      - tp2/**
   pull_request:
     branches:
       - master
