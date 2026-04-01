@@ -1,0 +1,262 @@
+name: openmrs-core
+services:
+  api:
+    build:
+      context: /workspaces/openmrs-core
+      dockerfile: Dockerfile
+      cache_from:
+        - openmrs/openmrs-core:dev
+        - openmrs/openmrs-core:nightly
+        - openmrs/openmrs-core:dev
+      target: dev
+    environment:
+      OMRS_ADMIN_PASSWORD_LOCKED: "true"
+      OMRS_ADMIN_USER_PASSWORD: Admin123
+      OMRS_AUTO_UPDATE_DATABASE: "true"
+      OMRS_BUILD: "true"
+      OMRS_BUILD_ARGS: ""
+      OMRS_BUILD_GOALS: ""
+      OMRS_CREATE_TABLES: "true"
+      OMRS_DB: mariadb
+      OMRS_DB_HOSTNAME: db
+      OMRS_DB_NAME: openmrs
+      OMRS_DB_PASSWORD: openmrs
+      OMRS_DB_USERNAME: openmrs
+      OMRS_DEV_DEBUG: "true"
+      OMRS_DEV_DEBUG_PORT: "8000"
+      OMRS_MODULE_WEB_ADMIN: "true"
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - -f
+        - http://localhost:8080/openmrs
+      timeout: 5s
+      interval: 3s
+      retries: 3
+    image: openmrs/openmrs-core:dev
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 8080
+        published: "8080"
+        protocol: tcp
+      - mode: ingress
+        target: 8000
+        published: "8000"
+        protocol: tcp
+    restart: "no"
+    volumes:
+      - type: bind
+        source: /workspaces/openmrs-core/target/data
+        target: /openmrs/data
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /workspaces/openmrs-core/logs
+        target: /openmrs/logs
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /workspaces/openmrs-core
+        target: /openmrs_core
+        bind:
+          create_host_path: true
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 8080
+        published: "8081"
+        protocol: tcp
+    volumes:
+      - type: bind
+        source: /
+        target: /rootfs
+        read_only: true
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /var/run
+        target: /var/run
+        read_only: true
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /sys
+        target: /sys
+        read_only: true
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /var/lib/docker/
+        target: /var/lib/docker
+        read_only: true
+        bind:
+          create_host_path: true
+  db:
+    command:
+      - mariadbd
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_general_ci
+    environment:
+      MARIADB_DATABASE: openmrs
+      MARIADB_PASSWORD: openmrs
+      MARIADB_ROOT_PASSWORD: openmrs
+      MARIADB_USER: openmrs
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - mariadb --user=openmrs --password=openmrs --execute "SHOW DATABASES;"
+      timeout: 5s
+      interval: 3s
+      retries: 3
+    image: mariadb:10.11.7
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 3306
+        published: "3306"
+        protocol: tcp
+    restart: "no"
+    volumes:
+      - type: volume
+        source: db-data
+        target: /var/lib/mysql
+        volume: {}
+  grafana:
+    container_name: openmrs-grafana
+    image: grafana/grafana
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 3000
+        published: "3000"
+        protocol: tcp
+  jaeger:
+    image: jaegertracing/all-in-one:1.53
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 16686
+        published: "16686"
+        protocol: tcp
+      - mode: ingress
+        target: 14268
+        published: "14268"
+        protocol: tcp
+  loki:
+    command:
+      - -config.file=/etc/loki/local-config.yaml
+    image: grafana/loki:2.9.0
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 3100
+        published: "3100"
+        protocol: tcp
+  node-exporter:
+    image: prom/node-exporter
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 9100
+        published: "9100"
+        protocol: tcp
+  otel-app:
+    build:
+      context: /workspaces/openmrs-core/otel-app
+      dockerfile: Dockerfile
+    depends_on:
+      api:
+        condition: service_started
+        required: true
+      otel-collector:
+        condition: service_started
+        required: true
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: otel-app
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 3000
+        published: "3001"
+        protocol: tcp
+  otel-collector:
+    command:
+      - --config=/etc/otel-config.yaml
+    image: otel/opentelemetry-collector:latest
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 4317
+        published: "4317"
+        protocol: tcp
+    volumes:
+      - type: bind
+        source: /workspaces/openmrs-core/monitoring/otel-config.yaml
+        target: /etc/otel-config.yaml
+        bind:
+          create_host_path: true
+  prometheus:
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    container_name: openmrs-prometheus
+    image: prom/prometheus
+    networks:
+      default: null
+    ports:
+      - mode: ingress
+        target: 9090
+        published: "9090"
+        protocol: tcp
+    volumes:
+      - type: bind
+        source: /workspaces/openmrs-core/monitoring/prometheus.yml
+        target: /etc/prometheus/prometheus.yml
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /workspaces/openmrs-core/monitoring/alert.rules.yml
+        target: /etc/prometheus/alert.rules.yml
+        bind:
+          create_host_path: true
+  promtail:
+    command:
+      - -config.file=/etc/promtail/config.yml
+    image: grafana/promtail:2.9.0
+    networks:
+      default: null
+    volumes:
+      - type: bind
+        source: /workspaces/openmrs-core/promtail-config.yml
+        target: /etc/promtail/config.yml
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /workspaces/openmrs-core/logs/openmrs.log
+        target: /var/log/openmrs.log
+        bind:
+          create_host_path: true
+      - type: bind
+        source: /var/lib/docker/containers
+        target: /var/lib/docker/containers
+        bind:
+          create_host_path: true
+networks:
+  default:
+    name: openmrs-core_default
+volumes:
+  db-data:
+    name: openmrs-core_db-data

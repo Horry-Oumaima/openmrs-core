@@ -20,6 +20,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
+
 public class LocationTest {
 
 	/**
@@ -101,5 +104,51 @@ public class LocationTest {
 		        Arrays.asList(nonRetiredLocation, firstChildOfNonRetiredLocation, secondChildOfNonRetiredLocation));
 
 		assertThat(descendantLocations, equalTo(expectedLocations));
+	}
+
+	@Test
+	public void removeChildLocation_shouldRemoveChildFromChildLocations() {
+		Location parent = new Location();
+		Location child = new Location();
+
+		parent.addChildLocation(child);
+
+		assertTrue(parent.getChildLocations().contains(child));
+
+		parent.removeChildLocation(child);
+
+		assertFalse(parent.getChildLocations().contains(child));
+	}
+
+	@Test
+	public void removeChildLocation_shouldNotFailWhenChildLocationsIsNull() {
+		Location parent = new Location();
+		Location child = new Location();
+
+		assertDoesNotThrow(() -> parent.removeChildLocation(child));
+	}
+
+	@Test
+	public void getAddress13_shouldReturnValueSetBySetter() {
+		Location location = new Location();
+		location.setAddress13("Address 13 value");
+
+		assertEquals("Address 13 value", location.getAddress13());
+	}
+
+	@Test
+	public void getAddress14_shouldReturnValueSetBySetter() {
+		Location location = new Location();
+		location.setAddress14("Address 14 value");
+
+		assertEquals("Address 14 value", location.getAddress14());
+	}
+
+	@Test
+	public void getAddress15_shouldReturnValueSetBySetter() {
+		Location location = new Location();
+		location.setAddress15("Address 15 value");
+
+		assertEquals("Address 15 value", location.getAddress15());
 	}
 }

@@ -42,6 +42,10 @@ services:
             OMRS_DB_PASSWORD: ${OMRS_DB_PASSWORD:-openmrs}
             OMRS_ADMIN_USER_PASSWORD: ${OMRS_ADMIN_USER_PASSWORD:-Admin123}
             OMRS_ADMIN_PASSWORD_LOCKED: ${OMRS_ADMIN_PASSWORD_LOCKED:-true}
+            OMRS_CREATE_TABLES: "true"
+            OMRS_AUTO_UPDATE_DATABASE: "true"
+            OMRS_MODULE_WEB_ADMIN: "true"
+            OMRS_DEV_DEBUG: "true"
         healthcheck:
             test: ["CMD", "curl", "-f", "http://localhost:8080/openmrs"]
             interval: 3s
@@ -49,20 +53,85 @@ services:
             retries: 3
         volumes:
             - openmrs-data:/openmrs/data/
+            - ./logs:/openmrs/logs 
 
     prometheus:
         image: prom/prometheus
         container_name: openmrs-prometheus
         ports:
-        - "9090:9090"
+            - "9090:9090"
         volumes:
-        - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+            - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+            - ./monitoring/alert.rules.yml:/etc/prometheus/alert.rules.yml
+        command:
+            - "--config.file=/etc/prometheus/prometheus.yml"
+            - "--web.enable-remote-write-receiver"
     grafana:
         image: grafana/grafana
         container_name: openmrs-grafana
         ports:
         - "3000:3000"
 
+    node-exporter:
+        image: prom/node-exporter
+        ports:
+            - "9100:9100"
+
+    loki:
+        image: grafana/loki:2.9.0
+        ports:
+            - "3100:3100"
+        command: -config.file=/etc/loki/local-config.yaml
+
+    promtail:
+        image: grafana/promtail:2.9.0
+        volumes:
+            - ./promtail-config.yml:/etc/promtail/config.yml
+            - ./logs/openmrs.log:/var/log/openmrs.log
+            - /var/lib/docker/containers:/var/lib/docker/containers
+        command: -config.file=/etc/promtail/config.yml
+
+    jaeger:
+        image: jaegertracing/all-in-one:1.53
+        ports:
+            - "16686:16686"
+            - "14268:14268"
+            - "14250:14250"
+    cadvisor:
+        image: gcr.io/cadvisor/cadvisor:latest
+        ports:
+            - "8081:8080"
+        volumes:
+            - /:/rootfs:ro
+            - /var/run:/var/run:ro
+            - /sys:/sys:ro
+            - /var/lib/docker/:/var/lib/docker:ro
+    otel-collector:
+        image: otel/opentelemetry-collector:latest
+        command: ["--config=/etc/otel-config.yaml"]
+        volumes:
+            - ./monitoring/otel-config.yaml:/etc/otel-config.yaml
+        ports:
+            - "4317:4317"
+            - "4318:4318"
+
+         
+
+    otel-app:
+        build: ./otel-app
+        ports:
+            - "3001:3000"
+        environment:
+            - OTEL_SERVICE_NAME=otel-app
+            - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+        depends_on:
+            - otel-collector
+            - api
+
+            
+
 volumes:
     db-data:
     openmrs-data:
+
+    
