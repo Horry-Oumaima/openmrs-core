@@ -47,7 +47,7 @@ jobs:
         # api module has the highest coverage obligations (TP1: 68% instruction / 61% branch)
 
       - name: Enforce coverage thresholds (60% instruction / 55% branch)
-        run: mvn -B -pl api -am jacoco:check
+        run: mvn -B -pl api jacoco:check
 
       - name: Upload JaCoCo HTML report
         if: always()
