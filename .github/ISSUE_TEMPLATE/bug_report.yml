@@ -1,0 +1,85 @@
+name: Bug Report
+description: Report a defect in OpenMRS Core
+title: "[BUG] "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug. Please fill in the sections below.
+        Contributions without a linked JIRA ticket are discouraged — check https://issues.openmrs.org first.
+
+  - type: input
+    id: jira-ticket
+    attributes:
+      label: JIRA Ticket
+      description: Link to the TRUNK-XXXX ticket (create one if it does not exist)
+      placeholder: "https://issues.openmrs.org/browse/TRUNK-XXXX"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Numbered steps to reproduce the behaviour
+      placeholder: |
+        1. Go to '...'
+        2. Call API endpoint '...'
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behaviour
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behaviour
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: OpenMRS Core Version
+      placeholder: "e.g. 3.0.0-SNAPSHOT, 2.7.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - Critical (data loss / security)
+        - High (feature broken)
+        - Medium (degraded but workaround exists)
+        - Low (cosmetic / minor)
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      options:
+        - label: I searched existing issues and this is not a duplicate
+          required: true
+        - label: I reproduced this on the OpenMRS demo server (not a local config issue)
+          required: false
+        - label: I checked whether this is a module issue (not core)
+          required: true

@@ -17,3 +17,26 @@ scrape_configs:
         labels:
           job: openmrs
           __path__: /var/lib/docker/containers/*/*.log
+    pipeline_stages:
+      # Docker wraps logs in JSON: {"log":"...","stream":"stdout","time":"..."}
+      - json:
+          expressions:
+            output: log
+            stream: stream
+      # Extract container name from the filename label
+      - regex:
+          expression: '/var/lib/docker/containers/(?P<container_id>[^/]+)/.+'
+          source: filename
+      # Parse log level from common patterns: INFO, WARN, ERROR, DEBUG
+      - regex:
+          expression: '(?i)(level|lvl|severity)[=:\s]+(?P<level>DEBUG|INFO|WARN|WARNING|ERROR|FATAL|CRITICAL)'
+          source: output
+      # Also catch bare level keywords at line start
+      - regex:
+          expression: '^\s*(?P<level>DEBUG|INFO|WARN|WARNING|ERROR|FATAL)'
+          source: output
+      - labels:
+          stream:
+          level:
+      - output:
+          source: output

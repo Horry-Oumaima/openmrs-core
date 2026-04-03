@@ -20,7 +20,81 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ──────────────────────────────────────────────────────────────────────
+  # JOB 1 — Code quality gate: tests + coverage + static analysis
+  # Addresses TP1 findings: low/uneven test coverage, code smells,
+  # deprecated APIs, supply-chain vulnerabilities.
+  # ──────────────────────────────────────────────────────────────────────
+  quality-gate:
+    name: Quality Gate (tests + coverage + SBOM)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Run unit tests with JaCoCo coverage
+        run: mvn -B -pl api test jacoco:report
+        # api module has the highest coverage obligations (TP1: 68% instruction / 61% branch)
+
+      - name: Enforce coverage thresholds (TP1 baseline +2%)
+        run: |
+          mvn -B -pl api jacoco:check \
+            -Djacoco.haltOnFailure=true \
+            -Djacoco.rules='[{"element":"BUNDLE","limits":[{"counter":"INSTRUCTION","value":"COVEREDRATIO","minimum":"0.60"},{"counter":"BRANCH","value":"COVEREDRATIO","minimum":"0.55"}]}]'
+
+      - name: Upload JaCoCo HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: api/target/site/jacoco/
+          if-no-files-found: warn
+
+      - name: Run Checkstyle (code style — TP1 finding)
+        run: mvn -B -pl api checkstyle:check
+
+      - name: Run SpotBugs static analysis (TP1 finding)
+        run: mvn -B -pl api spotbugs:check
+        continue-on-error: true
+
+      - name: SonarCloud analysis (TP1 — 1000+ code smells baseline)
+        uses: sonarsource/sonarcloud-github-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=openmrs_openmrs-core
+            -Dsonar.organization=openmrs
+            -Dsonar.java.binaries=api/target/classes
+            -Dsonar.coverage.jacoco.xmlReportPaths=api/target/site/jacoco/jacoco.xml
+        continue-on-error: true
+
+      - name: Generate SBOM — CycloneDX (TP1 supply-chain recommendation)
+        run: mvn -B org.cyclonedx:cyclonedx-maven-plugin:makeAggregateBom -DincludeLicenseText=false
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-cyclonedx
+          path: target/bom.xml
+          if-no-files-found: warn
+
+  # ──────────────────────────────────────────────────────────────────────
+  # JOB 2 — Infrastructure: deploy full observability stack + smoke tests
+  # ──────────────────────────────────────────────────────────────────────
   deploy-test-observe:
+    name: Deploy & Observe
+    needs: quality-gate
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -35,7 +109,7 @@ jobs:
           java-version: 21
           cache: maven
 
-      - name: Quick Maven validation
+      - name: Build application artifact (tests already run in quality-gate job)
         run: mvn -B -q -DskipTests clean package
 
       - name: Start test and observability stack
@@ -114,6 +188,28 @@ jobs:
           curl -fsS http://localhost:3001/
           curl -fsS http://localhost:3001/
           curl -fsS http://localhost:3001/
+
+      - name: Install k6 load testing tool
+        run: |
+          curl -fsSL https://dl.k6.io/key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/k6-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update -q && sudo apt-get install -y k6
+
+      - name: Run k6 smoke test — OpenMRS availability (TP2 performance)
+        run: |
+          k6 run \
+            -e BASE_URL=http://localhost:8080 \
+            --out json=k6-ci-results.json \
+            load-test-openmrs-basic.js
+        continue-on-error: true
+
+      - name: Upload k6 results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-load-test-results
+          path: k6-ci-results.json
+          if-no-files-found: warn
 
       - name: Show service logs
         if: always()

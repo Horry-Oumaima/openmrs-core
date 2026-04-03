@@ -1,0 +1,63 @@
+name: Feature Request
+description: Propose a new feature or improvement for OpenMRS Core
+title: "[FEATURE] "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        New features for core must benefit the majority of OpenMRS users.
+        Highly specific features are better suited for an add-on module.
+        Please discuss on https://talk.openmrs.org before opening this issue.
+
+  - type: input
+    id: jira-ticket
+    attributes:
+      label: JIRA Ticket
+      description: Link to or create a TRUNK-XXXX ticket
+      placeholder: "https://issues.openmrs.org/browse/TRUNK-XXXX"
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / Motivation
+      description: What problem does this feature solve? Why is it needed?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the feature and how it should work.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative approaches you have evaluated.
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Appropriate Scope
+      options:
+        - Core (benefits majority of users)
+        - Module (specific use-case — consider an add-on instead)
+        - Unsure
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      options:
+        - label: I searched existing issues and feature requests — this is not a duplicate
+          required: true
+        - label: I discussed this on OpenMRS Talk and the community is supportive
+          required: false

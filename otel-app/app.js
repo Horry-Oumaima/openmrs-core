@@ -1,18 +1,19 @@
-const express = require("express");
-const axios = require("axios");
-
 const { NodeSDK } = require("@opentelemetry/sdk-node");
 const { getNodeAutoInstrumentations } = require("@opentelemetry/auto-instrumentations-node");
-const { OTLPTraceExporter } = require("@opentelemetry/exporter-trace-otlp-grpc");
+const { OTLPTraceExporter } = require("@opentelemetry/exporter-trace-otlp-http");
 
 const sdk = new NodeSDK({
   traceExporter: new OTLPTraceExporter({
-    url: process.env.OTEL_EXPORTER_OTLP_ENDPOINT || "http://otel-collector:4317",
+    url: (process.env.OTEL_EXPORTER_OTLP_ENDPOINT || "http://jaeger:4318") + "/v1/traces",
   }),
   instrumentations: [getNodeAutoInstrumentations()],
 });
 
 sdk.start();
+
+// Import AFTER sdk.start() so auto-instrumentation can patch these modules
+const express = require("express");
+const axios = require("axios");
 
 const app = express();
 
@@ -42,8 +43,3 @@ app.get("/", async (req, res) => {
 app.listen(3000, "0.0.0.0", () => {
   console.log("Proxy running on port 3000");
 });
-
-
-
-
-

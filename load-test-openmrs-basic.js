@@ -10,8 +10,10 @@ export const options = {
   },
 };
 
+const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
+
 export default function () {
-  const res = http.get('http://api:8080/openmrs/');
+  const res = http.get(`${BASE_URL}/openmrs/`);
 
   check(res, {
     'status is 200 or 302': (r) => r.status === 200 || r.status === 302,

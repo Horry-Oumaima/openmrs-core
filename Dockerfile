@@ -137,7 +137,16 @@ RUN mkdir -p /openmrs/data/modules \
     && mkdir -p /openmrs/data/activemq-data \
     && chmod -R g+rw /openmrs \
     && chown -R 1001 /openmrs
-    
+
+# Download JMX Prometheus javaagent for JVM metrics (TP2: observability)
+ARG JMX_AGENT_VERSION=0.20.0
+RUN curl -fsSL -o /usr/local/tomcat/lib/jmx_prometheus_javaagent.jar \
+    "https://repo1.maven.org/maven2/io/prometheus/jmx/jmx_prometheus_javaagent/${JMX_AGENT_VERSION}/jmx_prometheus_javaagent-${JMX_AGENT_VERSION}.jar" \
+    && echo 'JAVA_OPTS="$JAVA_OPTS -javaagent:/usr/local/tomcat/lib/jmx_prometheus_javaagent.jar=9404:/etc/jmx-config.yaml"' \
+       >> /usr/local/tomcat/bin/setenv.sh
+
+COPY monitoring/jmx-config.yaml /etc/jmx-config.yaml
+
 # Copy in the start-up scripts
 COPY --from=dev /openmrs/wait-for-it.sh /openmrs/startup-init.sh /openmrs/startup.sh /openmrs/
 RUN chmod g+x /openmrs/wait-for-it.sh && chmod g+x /openmrs/startup-init.sh && chmod g+x /openmrs/startup.sh
@@ -149,6 +158,7 @@ COPY --from=dev /openmrs_core/LICENSE LICENSE
 COPY --from=dev /openmrs/distribution/openmrs_core/openmrs.war /openmrs/distribution/openmrs_core/openmrs.war
 
 EXPOSE 8080
+EXPOSE 9404
 
 # Run as non-root user using Bitnami approach, see e.g.
 # https://github.com/bitnami/containers/blob/6c8f10bbcf192ab4e575614491abf10697c46a3e/bitnami/tomcat/8.5/debian-11/Dockerfile#L54

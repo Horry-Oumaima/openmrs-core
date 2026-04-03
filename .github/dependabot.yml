@@ -59,3 +59,14 @@ updates:
       - dependency-name: "org.liquibase:liquibase-maven-plugin"
         versions:
           - ">= 4.0"
+  # Docker base images — keeps Tomcat, MariaDB, Grafana, Prometheus up to date
+  # Addresses TP1 supply-chain finding (OWASP Top 10 A06: Vulnerable Components)
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    pull-request-branch-name:
+      separator: "-"
+    labels:
+      - "dependencies"
+      - "docker"
