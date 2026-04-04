@@ -72,8 +72,8 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
           args: >
-            -Dsonar.projectKey=openmrs_openmrs-core
-            -Dsonar.organization=openmrs
+            -Dsonar.projectKey=horry-oumaima_openmrs-core
+            -Dsonar.organization=horry-oumaima
             -Dsonar.java.binaries=api/target/classes
             -Dsonar.coverage.jacoco.xmlReportPaths=api/target/site/jacoco/jacoco.xml
         continue-on-error: true
